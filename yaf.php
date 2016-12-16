@@ -87,7 +87,8 @@ final class Yaf_Application {
 
     /**
      * 获取 Yaf_Config_Abstract 的实例
-     * @return Yaf_Config_Abstract
+     *
+     * @return Yaf_Config_Abstract|object
      */
     public function getConfig(){}
 
@@ -334,7 +335,8 @@ final class Yaf_Dispatcher
 
 /**
  * yaf配置读写类
- * 
+ * Yaf_Config_Ini利用PHP的函数parse_ini_file()来解析配置文件的
+ *
  * Yaf_Config_Ini允许开发者通过嵌套的对象属性语法在应用程序中用熟悉的INI格式存储和读取配置数据。 
  * INI格式在提供拥有配置数据键的等级结构和配置数据节之间的继承能力方面具有专长。 配置数据等级结构通过用点或者句号(.)分离键值。
  * 一个节可以扩展或者通过在节的名称之后带一个冒号(:)和被继承的配置数据的节的名称来从另一个节继承。
@@ -345,7 +347,7 @@ class Yaf_Config_Ini extends Yaf_Config_Abstract implements Iterator, Traversabl
 
     /* properties */
     protected $_config = NULL;
-    protected $_readonly = "1";
+    protected $_readonly = 1;
 
     /* methods */
     /**
@@ -355,7 +357,13 @@ class Yaf_Config_Ini extends Yaf_Config_Abstract implements Iterator, Traversabl
      * @param null $section 选择部分
      */
     public function __construct($config_file, $section = NULL){}
-    public function get($name = NULL){}
+
+    /**
+     *
+     * @param null $name 点分式: foo.boo.zoo, 对象式:->foo->boo->zoo
+     * @param null $default
+     */
+    public function get($name = NULL, $default = null){}
     public function set($name, $value){}
     public function count(){}
     public function rewind(){}
@@ -364,7 +372,9 @@ class Yaf_Config_Ini extends Yaf_Config_Abstract implements Iterator, Traversabl
     public function valid(){}
     public function key(){}
     public function toArray(){}
-    public function readonly(){}
+    public function readonly(){
+        return $this->_readonly == 1;
+    }
     public function offsetUnset($name){}
     public function offsetGet($name){}
     public function offsetExists($name){}
@@ -488,14 +498,62 @@ abstract class Yaf_Plugin_Abstract {
 
     /* properties */
 
-    /* methods */
+    /**
+     * 在路由之前触发
+     * 这个是7个事件中, 最早的一个. 但是一些全局自定的工作, 还是应该放在Bootstrap中去完成
+     * @param Yaf_Request_Abstract  $request
+     * @param Yaf_Response_Abstract $response
+     */
     public function routerStartup(Yaf_Request_Abstract $request, Yaf_Response_Abstract $response){}
+
+    /**
+     * 路由结束之后触发
+     * 此时路由一定正确完成, 否则这个事件不会触发
+     *
+     * @param Yaf_Request_Abstract  $request
+     * @param Yaf_Response_Abstract $response
+     */
     public function routerShutdown(Yaf_Request_Abstract $request, Yaf_Response_Abstract $response){}
+
+    /**
+     * 分发循环开始之前被触发
+     * @param Yaf_Request_Abstract  $request
+     * @param Yaf_Response_Abstract $response
+     */
     public function dispatchLoopStartup(Yaf_Request_Abstract $request, Yaf_Response_Abstract $response){}
-    public function dispatchLoopShutdown(Yaf_Request_Abstract $request, Yaf_Response_Abstract $response){}
+
+    /**
+     * 分发之前触发
+     * 如果在一个请求处理过程中, 发生了forward, 则这个事件会被触发多次
+     * @param Yaf_Request_Abstract  $request
+     * @param Yaf_Response_Abstract $response
+     */
     public function preDispatch(Yaf_Request_Abstract $request, Yaf_Response_Abstract $response){}
+
+    /**
+     * 分发结束之后触发
+     * 此时动作已经执行结束, 视图也已经渲染完成. 和preDispatch类似, 此事件也可能触发多次
+     * @param Yaf_Request_Abstract  $request
+     * @param Yaf_Response_Abstract $response
+     */
     public function postDispatch(Yaf_Request_Abstract $request, Yaf_Response_Abstract $response){}
+
+    /**
+     * 分发循环结束之后触发
+     * 此时表示所有的业务逻辑都已经运行完成, 但是响应还没有发送
+     * @param Yaf_Request_Abstract  $request
+     * @param Yaf_Response_Abstract $response
+     */
+    public function dispatchLoopShutdown(Yaf_Request_Abstract $request, Yaf_Response_Abstract $response){}
+
+    /**
+     * 响应发送之前
+     *
+     * @param Yaf_Request_Abstract  $request
+     * @param Yaf_Response_Abstract $response
+     */
     public function preResponse(Yaf_Request_Abstract $request, Yaf_Response_Abstract $response){}
+
 }
 
 /**
@@ -606,6 +664,7 @@ class Yaf_Request_Simple extends Yaf_Request_Abstract {
 
 abstract class Yaf_Response_Abstract {
     /* constants */
+    const DEFAULT_BODY = 'content';
 
     /* properties */
     protected $_header = NULL;
@@ -614,20 +673,89 @@ abstract class Yaf_Response_Abstract {
 
     /* methods */
     public function __construct(){}
+
+    /**
+     * 设置响应的Body
+     *
+     * @param string $content
+     * @param string $key
+     */
+    public function setBody($content , $key = null){}
+
+    /**
+     * 往已有的响应body后附加新的内容
+     *
+     * @param string $content
+     * @param string $key
+     *
+     * @return bool
+     */
+    public function appendBody($content , $key = null){}
+
+    /**
+     * 往已有的响应body前插入新的内容
+     *
+     * @param string $content
+     * @param string $key
+     *
+     * @return bool
+     */
+    public function prependBody($content , $key){}
+
+    /**
+     * 清除已经设置的响应body
+     * @param string $key
+     *
+     * @return bool
+     */
+    public function clearBody($key = null){}
+
+    /**
+     * @param string|null $key
+     *
+     * @return string|array
+     */
+    public function getBody($key = null){}
+
+    /**
+     * 设置header头
+     *
+     * @param $key
+     * @param $value
+     */
+    public function setHeader($name, $value){}
+
+    /**
+     * @param array $headers
+     */
+    protected function setAllHeaders(array $headers){}
+
+    /**
+     * @param string $name
+     *
+     * @return string
+     */
+    public function getHeader($name){}
+
+    /**
+     * 清除所有
+     */
+    public function clearHeaders(){}
+
+    /**
+     *
+     */
+    public function setRedirect(){}
+
+    /**
+     * 顺序输出所有的body内容
+     */
+    public function response(){}
+
+    private function __toString(){}
+
     public function __destruct(){}
     private function __clone(){}
-    private function __toString(){}
-    public function setBody(){}
-    public function appendBody(){}
-    public function prependBody(){}
-    public function clearBody(){}
-    public function getBody(){}
-    public function setHeader(){}
-    protected function setAllHeaders(){}
-    public function getHeader(){}
-    public function clearHeaders(){}
-    public function setRedirect(){}
-    public function response(){}
 }
 
 class Yaf_Response_Http extends Yaf_Response_Abstract {
@@ -850,7 +978,20 @@ abstract class Yaf_Config_Abstract
     protected $_readonly = "1";
 
     /* methods */
-    abstract public function get($name = NULL);
+    /**
+     * @param null $name
+     * @param mixed
+     *
+     * @return mixed
+     */
+    abstract public function get($name = NULL,$default = null);
+
+    /**
+     * @param $name
+     * @param $value
+     *
+     * @return static
+     */
     abstract public function set($name, $value);
 
     /**
