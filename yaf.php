@@ -605,8 +605,8 @@ class Yaf_Request_Http extends Yaf_Request_Abstract {
  */
 class Yaf_Request_Simple extends Yaf_Request_Abstract {
     /* constants */
-    const SCHEME_HTTP = http;
-    const SCHEME_HTTPS = https;
+    const SCHEME_HTTP = 'http';
+    const SCHEME_HTTPS = 'https';
 
     /* properties */
     public $module = NULL;
@@ -1161,6 +1161,15 @@ abstract class Yaf_Request_Abstract {
     protected $uri = "";
     protected $dispatched = "";
     protected $routed = "";
+
+    /**
+     * @param $method
+     * @param $module
+     * @param $controller
+     * @param $action
+     * @param $param
+     */
+    public function __construct($method, $module, $controller, $action, $param) {}
 
     /* methods */
     /**
